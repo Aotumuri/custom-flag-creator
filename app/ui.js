@@ -32,7 +32,6 @@ export function renderAssetLibrary(root) {
                 </div>
                 <div class="asset-copy">
                   <strong>${asset.label}</strong>
-                  <span>${asset.id}.svg</span>
                 </div>
               </button>
             </li>
