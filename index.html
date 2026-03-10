@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Custom Flag Creator</title>
+    <meta
+      name="description"
+      content="Build layered flags from SVG parts, recolor them, and share the result with a link."
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./components.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <div class="title-block">
+          <h1>Custom Flag Creator</h1>
+          <p class="topbar-note">
+            <code>full.svg</code> -> custom layers -> <code>frame.svg</code>
+          </p>
+        </div>
+        <div class="topbar-actions">
+          <div class="base-controls">
+            <label class="base-color-control">
+              <span>Base</span>
+              <input id="base-color" type="color" value="#ffffff" />
+            </label>
+            <div id="base-presets" class="color-presets" aria-label="Base color presets"></div>
+          </div>
+          <label class="share-field" for="share-url">
+            <span>Share</span>
+            <input id="share-url" class="share-input" type="text" readonly />
+          </label>
+          <button id="copy-link" class="button button-primary" type="button">
+            Share
+          </button>
+          <button id="reset-flag" class="button" type="button">
+            Reset
+          </button>
+        </div>
+      </header>
+      <p id="status-message" class="status-message" aria-live="polite"></p>
+
+      <main class="workspace">
+        <section class="panel preview-panel">
+          <div class="panel-header">
+            <h2>Preview</h2>
+          </div>
+          <div class="flag-stage">
+            <div id="flag-preview" class="flag-canvas" aria-label="Flag preview"></div>
+          </div>
+          <p class="panel-note">
+            Order: <code>full.svg</code> -> custom layers -> <code>frame.svg</code>
+          </p>
+        </section>
+
+        <section class="panel controls-panel">
+          <section class="stack-section">
+            <div class="panel-header">
+              <h2>Layers</h2>
+            </div>
+            <ol id="layers-list" class="layer-list"></ol>
+            <p id="empty-layers" class="empty-state">
+              No custom layers yet. Add one from the library below.
+            </p>
+          </section>
+          <section class="stack-section stack-section-fill">
+            <div class="panel-header">
+              <h2>Library</h2>
+            </div>
+            <div id="asset-library" class="asset-library"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="./app/main.js"></script>
+  </body>
+</html>

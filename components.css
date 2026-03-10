@@ -1,0 +1,243 @@
+.panel {
+  min-height: 0;
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+.panel-header,
+.topbar-actions,
+.base-controls,
+.base-color-control,
+.layer-toolbar,
+.layer-heading,
+.color-input,
+.layer-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.panel-header {
+  justify-content: space-between;
+}
+
+.base-color-control,
+.share-field,
+.color-input {
+  font-size: 0.87rem;
+}
+
+.base-controls,
+.layer-color-tools {
+  display: grid;
+  gap: 6px;
+}
+
+.base-color-control,
+.share-field {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.share-field span,
+.base-color-control span {
+  white-space: nowrap;
+}
+
+.share-input,
+.button {
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.share-input {
+  width: 100%;
+  min-width: 0;
+  padding: 0 10px;
+}
+
+.button {
+  padding: 0 12px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.button-primary {
+  border-color: var(--accent);
+}
+
+.base-color-control input,
+.color-input input {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.flag-stage {
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  background: #fafafa;
+}
+
+.flag-canvas {
+  position: relative;
+  width: min(100%, 420px);
+  aspect-ratio: 1 / 1;
+}
+
+.flag-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.flag-layer svg,
+.asset-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.status-message[data-tone="success"] {
+  color: #0a6a0a;
+}
+
+.status-message[data-tone="error"] {
+  color: #b00020;
+}
+
+.layer-list,
+.asset-grid {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.layer-list,
+.asset-library {
+  min-height: 0;
+  overflow: auto;
+}
+
+.layer-list {
+  display: grid;
+  gap: 8px;
+}
+
+.layer-item {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+}
+
+.layer-thumb {
+  width: 40px;
+  height: 40px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.layer-copy {
+  min-width: 0;
+}
+
+.layer-copy strong,
+.asset-card strong,
+.asset-group h3 {
+  display: block;
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.layer-toolbar,
+.layer-actions {
+  flex-wrap: wrap;
+}
+
+.color-presets {
+  display: grid;
+  grid-template-columns: repeat(8, 14px);
+  gap: 4px;
+}
+
+.color-swatch {
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 1px solid var(--line);
+  cursor: pointer;
+}
+
+.color-swatch.is-selected {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.empty-state {
+  padding: 10px;
+  border: 1px dashed var(--line);
+}
+
+.asset-library {
+  display: grid;
+  gap: 12px;
+}
+
+.asset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.asset-card {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.asset-thumb {
+  height: 56px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  background: #fafafa;
+}
+
+@media (max-width: 980px) {
+  .panel,
+  .layer-item,
+  .asset-card,
+  .share-input,
+  .button,
+  .flag-stage,
+  .layer-thumb,
+  .asset-thumb,
+  .base-color-control input,
+  .color-input input {
+    border-radius: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .topbar-actions {
+    align-items: stretch;
+  }
+
+  .button {
+    width: 100%;
+  }
+}
