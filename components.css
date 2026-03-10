@@ -200,6 +200,11 @@
   gap: 8px;
 }
 
+.asset-grid > li,
+.asset-card {
+  min-width: 0;
+}
+
 .asset-card {
   display: grid;
   gap: 8px;
@@ -209,6 +214,15 @@
   background: #ffffff;
   text-align: left;
   cursor: pointer;
+}
+
+.asset-copy {
+  min-width: 0;
+}
+
+.asset-card strong,
+.asset-card span {
+  overflow-wrap: anywhere;
 }
 
 .asset-thumb {

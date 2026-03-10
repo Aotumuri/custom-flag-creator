@@ -30,7 +30,7 @@ export function renderAssetLibrary(root) {
                 <div class="asset-thumb">
                   <img src="${asset.thumbPath}" alt="${asset.label}" loading="lazy" />
                 </div>
-                <div>
+                <div class="asset-copy">
                   <strong>${asset.label}</strong>
                   <span>${asset.id}.svg</span>
                 </div>
