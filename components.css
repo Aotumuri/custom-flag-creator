@@ -99,6 +99,7 @@
 }
 
 .flag-layer svg,
+.layer-thumb svg,
 .asset-thumb img {
   display: block;
   width: 100%;

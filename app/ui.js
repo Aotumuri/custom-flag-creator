@@ -66,9 +66,7 @@ export function renderLayers(root, emptyState, layers) {
       return `
         <li class="layer-item" data-layer-id="${layer.id}">
           <div class="layer-heading">
-            <div class="layer-thumb">
-              <img src="${asset.thumbPath}" alt="${asset.label}" />
-            </div>
+            <div class="layer-thumb" data-layer-thumb="${layer.id}" aria-hidden="true"></div>
             <div class="layer-copy">
               <strong>${asset.label}</strong>
               <span>Custom layer ${index + 1}</span>

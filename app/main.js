@@ -5,6 +5,7 @@ import {
   normalizeColor,
   normalizeState
 } from "./model.js";
+import { renderLayerThumbs } from "./layer-thumbs.js";
 import { readStateFromUrl, writeStateToUrl } from "./share.js";
 import { buildLayerMarkup } from "./svg.js";
 import { renderAssetLibrary, renderBasePresets, renderLayers, syncLayerColors } from "./ui.js";
@@ -53,6 +54,11 @@ function updateState(nextState, options = {}) {
   renderPreview().catch(() => {
     setStatus("Preview could not be rendered.", "error");
   });
+  if (layerRenderMode !== "none") {
+    renderLayerThumbs(refs.layersList, state.layers).catch(() => {
+      setStatus("Layer thumbnails could not be rendered.", "error");
+    });
+  }
   syncShareField();
 }
 
