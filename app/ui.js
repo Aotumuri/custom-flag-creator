@@ -2,17 +2,17 @@ import { assetGroups, assets, getAsset } from "./catalog.js";
 import { COLOR_PRESETS } from "./palette.js";
 
 function renderPresetButtons(currentColor, datasetKey, datasetValue) {
-  return COLOR_PRESETS.map((color) => {
-    const selected = color === currentColor ? " is-selected" : "";
+  return COLOR_PRESETS.map((preset) => {
+    const selected = preset.value === currentColor ? " is-selected" : "";
     return `
       <button
         class="color-swatch${selected}"
         type="button"
-        style="background:${color}"
-        title="${color}"
-        aria-label="Use ${color}"
+        style="background:${preset.value}"
+        title="${preset.value}"
+        aria-label="Use ${preset.value}"
         data-${datasetKey}="${datasetValue}"
-        data-color="${color}"
+        data-color="${preset.value}"
       ></button>
     `;
   }).join("");

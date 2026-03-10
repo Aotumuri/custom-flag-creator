@@ -1,14 +1,9 @@
-import { assets } from "./catalog.js";
+import { getAssetByShareCode, getAssetShareCode } from "./catalog.js";
 import { inflateState } from "./model.js";
-import { COLOR_PRESETS } from "./palette.js";
+import { getPresetCode, getPresetColor } from "./palette.js";
 
 const decoder = new TextDecoder();
-const ASSET_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-const PRESET_ALPHABET = "0123456789abcdef";
 const SHARE_PREFIX = "!";
-const assetIndexById = new Map(assets.map((asset, index) => [asset.id, index]));
-const assetByCode = new Map(assets.map((asset, index) => [ASSET_ALPHABET[index], asset.id]));
-const presetIndexByColor = new Map(COLOR_PRESETS.map((color, index) => [color, index]));
 
 function bytesToBase64Url(bytes) {
   let binary = "";
@@ -26,20 +21,18 @@ function base64UrlToBytes(value) {
 }
 
 function colorToToken(color) {
-  const normalized = color.toLowerCase();
-  const presetIndex = presetIndexByColor.get(normalized);
-  if (presetIndex !== undefined) {
-    return PRESET_ALPHABET[presetIndex];
+  const presetCode = getPresetCode(color);
+  if (presetCode !== null) {
+    return presetCode;
   }
-  const hex = normalized.slice(1);
+  const hex = color.toLowerCase().slice(1);
   return `~${bytesToBase64Url(
     Uint8Array.from([0, 2, 4].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16)))
   )}`;
 }
 
 function tokenToColor(token) {
-  const presetIndex = PRESET_ALPHABET.indexOf(token);
-  return presetIndex >= 0 ? COLOR_PRESETS[presetIndex] : null;
+  return getPresetColor(token);
 }
 
 function bytesToHexColor(bytes) {
@@ -53,11 +46,11 @@ function encodeCompactState(state) {
   const baseToken = colorToToken(state.baseColor);
   const layerTokens = state.layers
     .map((layer) => {
-      const assetIndex = assetIndexById.get(layer.assetId);
-      if (assetIndex === undefined) {
+      const assetCode = getAssetShareCode(layer.assetId);
+      if (assetCode === null) {
         throw new Error("Unknown asset");
       }
-      return `${ASSET_ALPHABET[assetIndex]}${colorToToken(layer.color)}`;
+      return `${assetCode}${colorToToken(layer.color)}`;
     })
     .join("");
   return `${SHARE_PREFIX}${baseToken}${layerTokens}`;
@@ -91,7 +84,7 @@ function decodeCompactState(payload) {
 
     const layers = [];
     while (cursor < payload.length) {
-      const assetId = assetByCode.get(payload[cursor]);
+      const assetId = getAssetByShareCode(payload[cursor])?.id;
       const colorMode = payload[cursor + 1];
       if (!assetId || !colorMode) {
         return null;

@@ -1,50 +1,50 @@
-const assetNames = [
-  "half_t",
-  "half_b",
-  "half_l",
-  "half_r",
-  "center_hline",
-  "center_vline",
-  "diag_bl",
-  "diag_br",
-  "tricolor_l",
-  "tricolor_c",
-  "tricolor_r",
-  "tricolor_t",
-  "tricolor_m",
-  "tricolor_b",
-  "triangle_t",
-  "triangle_b",
-  "triangle_l",
-  "triangle_r",
-  "triangle_tl",
-  "triangle_tr",
-  "triangle_bl",
-  "triangle_br",
-  "mini_tr_tl",
-  "mini_tr_tr",
-  "mini_tr_bl",
-  "mini_tr_br",
-  "center_circle",
-  "center_star",
-  "center_flower",
-  "flower_tl",
-  "flower_tc",
-  "flower_tr",
-  "octagram",
-  "octagram_2",
-  "eu_star",
-  "laurel_wreath",
-  "nato_emblem",
-  "rocket",
-  "rocket_mini",
-  "translator",
-  "admin_contributors",
-  "admin_evan",
-  "admin_shield",
-  "admin_shield_r",
-  "beta_tester",
-  "beta_tester_circle"
+const assetDefinitions = [
+  ["half_t", "A"],
+  ["half_b", "B"],
+  ["half_l", "C"],
+  ["half_r", "D"],
+  ["center_hline", "E"],
+  ["center_vline", "F"],
+  ["diag_bl", "G"],
+  ["diag_br", "H"],
+  ["tricolor_l", "I"],
+  ["tricolor_c", "J"],
+  ["tricolor_r", "K"],
+  ["tricolor_t", "L"],
+  ["tricolor_m", "M"],
+  ["tricolor_b", "N"],
+  ["triangle_t", "O"],
+  ["triangle_b", "P"],
+  ["triangle_l", "Q"],
+  ["triangle_r", "R"],
+  ["triangle_tl", "S"],
+  ["triangle_tr", "T"],
+  ["triangle_bl", "U"],
+  ["triangle_br", "V"],
+  ["mini_tr_tl", "W"],
+  ["mini_tr_tr", "X"],
+  ["mini_tr_bl", "Y"],
+  ["mini_tr_br", "Z"],
+  ["center_circle", "a"],
+  ["center_star", "b"],
+  ["center_flower", "c"],
+  ["flower_tl", "d"],
+  ["flower_tc", "e"],
+  ["flower_tr", "f"],
+  ["octagram", "g"],
+  ["octagram_2", "h"],
+  ["eu_star", "i"],
+  ["laurel_wreath", "j"],
+  ["nato_emblem", "k"],
+  ["rocket", "l"],
+  ["rocket_mini", "m"],
+  ["translator", "n"],
+  ["admin_contributors", "o"],
+  ["admin_evan", "p"],
+  ["admin_shield", "q"],
+  ["admin_shield_r", "r"],
+  ["beta_tester", "s"],
+  ["beta_tester_circle", "t"]
 ];
 
 const labels = {
@@ -134,14 +134,26 @@ export const FRAME_LAYER = {
 
 export const assetGroups = groups;
 
-export const assets = assetNames.map((assetId) => ({
+export const assets = assetDefinitions.map(([assetId, shareCode]) => ({
   id: assetId,
   label: labels[assetId] ?? assetId.replaceAll("_", " "),
   groupId: getGroupId(assetId),
   path: `./custom/${assetId}.svg`,
-  thumbPath: `./custom/${assetId}.svg`
+  thumbPath: `./custom/${assetId}.svg`,
+  shareCode
 }));
 
+const assetById = new Map(assets.map((asset) => [asset.id, asset]));
+const assetByShareCode = new Map(assets.map((asset) => [asset.shareCode, asset]));
+
 export function getAsset(assetId) {
-  return assets.find((asset) => asset.id === assetId) ?? null;
+  return assetById.get(assetId) ?? null;
+}
+
+export function getAssetByShareCode(code) {
+  return assetByShareCode.get(code) ?? null;
+}
+
+export function getAssetShareCode(assetId) {
+  return assetById.get(assetId)?.shareCode ?? null;
 }
