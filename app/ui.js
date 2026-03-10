@@ -64,7 +64,7 @@ export function renderLayers(root, emptyState, layers) {
       }
 
       return `
-        <li class="layer-item">
+        <li class="layer-item" data-layer-id="${layer.id}">
           <div class="layer-heading">
             <div class="layer-thumb">
               <img src="${asset.thumbPath}" alt="${asset.label}" />
@@ -94,4 +94,24 @@ export function renderLayers(root, emptyState, layers) {
       `;
     })
     .join("");
+}
+
+export function syncLayerColors(root, layers) {
+  const layerById = new Map(layers.map((layer) => [layer.id, layer]));
+
+  root.querySelectorAll("[data-layer-id]").forEach((layerNode) => {
+    const layer = layerById.get(layerNode.dataset.layerId);
+    if (!layer) {
+      return;
+    }
+
+    const colorInput = layerNode.querySelector("[data-layer-color]");
+    if (colorInput && colorInput.value !== layer.color) {
+      colorInput.value = layer.color;
+    }
+
+    layerNode.querySelectorAll("[data-layer-preset]").forEach((button) => {
+      button.classList.toggle("is-selected", button.dataset.color === layer.color);
+    });
+  });
 }

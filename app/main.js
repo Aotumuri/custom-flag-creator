@@ -7,7 +7,7 @@ import {
 } from "./model.js";
 import { readStateFromUrl, writeStateToUrl } from "./share.js";
 import { buildLayerMarkup } from "./svg.js";
-import { renderAssetLibrary, renderBasePresets, renderLayers } from "./ui.js";
+import { renderAssetLibrary, renderBasePresets, renderLayers, syncLayerColors } from "./ui.js";
 
 const refs = {
   assetLibrary: document.querySelector("#asset-library"),
@@ -30,19 +30,30 @@ function setStatus(message, tone = "neutral") {
   refs.statusMessage.dataset.tone = tone;
 }
 
-function updateState(nextState) {
-  state = normalizeState(nextState);
-  refs.baseColor.value = state.baseColor;
-  renderBasePresets(refs.basePresets, state.baseColor);
-  renderLayers(refs.layersList, refs.emptyLayers, state.layers);
-  renderPreview().catch(() => {
-    setStatus("Preview could not be rendered.", "error");
-  });
+function syncShareField() {
   refs.shareUrl.value = "Generating...";
   syncShareUrl().catch(() => {
     refs.shareUrl.value = "";
     setStatus("Share URL could not be updated.", "error");
   });
+}
+
+function updateState(nextState, options = {}) {
+  const { layerRenderMode = "full" } = options;
+  state = normalizeState(nextState);
+  refs.baseColor.value = state.baseColor;
+  renderBasePresets(refs.basePresets, state.baseColor);
+
+  if (layerRenderMode === "full") {
+    renderLayers(refs.layersList, refs.emptyLayers, state.layers);
+  } else if (layerRenderMode === "colors") {
+    syncLayerColors(refs.layersList, state.layers);
+  }
+
+  renderPreview().catch(() => {
+    setStatus("Preview could not be rendered.", "error");
+  });
+  syncShareField();
 }
 
 function addLayer(assetId) {
@@ -71,7 +82,7 @@ function updateLayerColor(layerId, color) {
     layers: state.layers.map((layer) =>
       layer.id === layerId ? { ...layer, color: normalizeColor(color, layer.color) } : layer
     )
-  });
+  }, { layerRenderMode: "colors" });
 }
 
 function removeLayer(layerId) {
@@ -184,7 +195,7 @@ function bindEvents() {
     updateState({
       ...state,
       baseColor: event.target.value
-    });
+    }, { layerRenderMode: "none" });
   });
 
   refs.basePresets.addEventListener("click", (event) => {
@@ -196,7 +207,7 @@ function bindEvents() {
     updateState({
       ...state,
       baseColor: preset.dataset.color
-    });
+    }, { layerRenderMode: "none" });
   });
 
   refs.copyLink.addEventListener("click", () => {
