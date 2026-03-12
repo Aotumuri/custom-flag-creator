@@ -91,6 +91,7 @@
   position: relative;
   width: min(100%, 420px);
   aspect-ratio: 1 / 1;
+  overflow: hidden;
 }
 
 .flag-layer {
@@ -137,6 +138,33 @@
   gap: 10px;
   padding: 10px;
   border: 1px solid var(--line);
+}
+
+.layer-settings {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.layer-setting {
+  display: grid;
+  gap: 4px;
+  font-size: 0.8rem;
+}
+
+.layer-setting-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.layer-number-input {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  background: #ffffff;
 }
 
 .layer-thumb {
@@ -242,7 +270,8 @@
   .layer-thumb,
   .asset-thumb,
   .base-color-control input,
-  .color-input input {
+  .color-input input,
+  .layer-number-input {
     border-radius: 0;
   }
 }
@@ -254,5 +283,9 @@
 
   .button {
     width: 100%;
+  }
+
+  .layer-settings {
+    grid-template-columns: 1fr;
   }
 }

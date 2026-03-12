@@ -1,5 +1,13 @@
 import { assetGroups, assets, getAsset } from "./catalog.js";
+import { LAYER_TRANSFORM_LIMITS } from "./model.js";
 import { COLOR_PRESETS } from "./palette.js";
+
+const TRANSFORM_FIELDS = [
+  { field: "offsetX", label: "X", suffix: "" },
+  { field: "offsetY", label: "Y", suffix: "" },
+  { field: "scale", label: "Size", suffix: "%" },
+  { field: "rotation", label: "Tilt", suffix: "deg" }
+];
 
 function renderPresetButtons(currentColor, datasetKey, datasetValue) {
   return COLOR_PRESETS.map((preset) => {
@@ -16,6 +24,36 @@ function renderPresetButtons(currentColor, datasetKey, datasetValue) {
       ></button>
     `;
   }).join("");
+}
+
+function renderTransformInput(layer, config) {
+  const limits = LAYER_TRANSFORM_LIMITS[config.field];
+  return `
+    <label class="layer-setting">
+      <span>${config.label}</span>
+      <div class="layer-setting-row">
+        <input
+          class="layer-number-input"
+          type="number"
+          value="${layer[config.field]}"
+          min="${limits.min}"
+          max="${limits.max}"
+          step="${limits.step}"
+          data-layer-transform="${layer.id}"
+          data-layer-field="${config.field}"
+        />
+        ${config.suffix ? `<small>${config.suffix}</small>` : ""}
+      </div>
+    </label>
+  `;
+}
+
+function renderTransformControls(layer) {
+  return `
+    <div class="layer-settings" aria-label="Layer transform controls">
+      ${TRANSFORM_FIELDS.map((config) => renderTransformInput(layer, config)).join("")}
+    </div>
+  `;
 }
 
 export function renderAssetLibrary(root) {
@@ -87,13 +125,14 @@ export function renderLayers(root, emptyState, layers) {
               <button class="button" type="button" data-remove-layer="${layer.id}">Remove</button>
             </div>
           </div>
+          ${renderTransformControls(layer)}
         </li>
       `;
     })
     .join("");
 }
 
-export function syncLayerColors(root, layers) {
+export function syncLayerControls(root, layers) {
   const layerById = new Map(layers.map((layer) => [layer.id, layer]));
 
   root.querySelectorAll("[data-layer-id]").forEach((layerNode) => {
@@ -109,6 +148,13 @@ export function syncLayerColors(root, layers) {
 
     layerNode.querySelectorAll("[data-layer-preset]").forEach((button) => {
       button.classList.toggle("is-selected", button.dataset.color === layer.color);
+    });
+
+    layerNode.querySelectorAll("[data-layer-transform]").forEach((input) => {
+      const field = input.dataset.layerField;
+      if (field && input.value !== String(layer[field])) {
+        input.value = layer[field];
+      }
     });
   });
 }

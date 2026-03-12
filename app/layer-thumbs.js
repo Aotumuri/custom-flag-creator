@@ -1,4 +1,4 @@
-import { getAsset } from "./catalog.js";
+import { BASE_LAYER, getAsset } from "./catalog.js";
 import { buildLayerMarkup } from "./svg.js";
 
 let thumbToken = 0;
@@ -10,7 +10,12 @@ export async function renderLayerThumbs(root, layers) {
       const asset = getAsset(layer.assetId);
       return [
         layer.id,
-        asset ? await buildLayerMarkup(asset.path, layer.color) : ""
+        asset
+          ? await buildLayerMarkup(asset.path, layer.color, {
+              clipPath: BASE_LAYER.path,
+              transform: layer
+            })
+          : ""
       ];
     })
   );

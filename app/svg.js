@@ -1,6 +1,8 @@
 const svgCache = new Map();
+const clipMarkupCache = new Map();
 const parser = new DOMParser();
 const serializer = new XMLSerializer();
+const SVG_CENTER = 36;
 
 function parseDeclarations(block) {
   return block
@@ -63,6 +65,63 @@ function normalizeRoot(svg) {
   svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
 }
 
+function wrapLayerMarkup(markup, transform) {
+  let result = markup;
+
+  if (transform.scale !== 100) {
+    const scale = transform.scale / 100;
+    result = `
+      <g transform="translate(${SVG_CENTER} ${SVG_CENTER}) scale(${scale}) translate(${-SVG_CENTER} ${-SVG_CENTER})">
+        ${result}
+      </g>
+    `;
+  }
+
+  if (transform.rotation !== 0) {
+    result = `
+      <g transform="rotate(${transform.rotation} ${SVG_CENTER} ${SVG_CENTER})">
+        ${result}
+      </g>
+    `;
+  }
+
+  if (transform.offsetX !== 0 || transform.offsetY !== 0) {
+    result = `
+      <g transform="translate(${transform.offsetX} ${transform.offsetY})">
+        ${result}
+      </g>
+    `;
+  }
+
+  return result;
+}
+
+function applyLayerOptions(svg, clipMarkup, transform) {
+  if (!clipMarkup && !transform) {
+    return;
+  }
+
+  let markup = svg.innerHTML;
+  if (transform) {
+    markup = wrapLayerMarkup(markup, transform);
+  }
+
+  if (clipMarkup) {
+    markup = `
+      <defs>
+        <clipPath id="flag-layer-clip" clipPathUnits="userSpaceOnUse">
+          ${clipMarkup}
+        </clipPath>
+      </defs>
+      <g clip-path="url(#flag-layer-clip)">
+        ${markup}
+      </g>
+    `;
+  }
+
+  svg.innerHTML = markup;
+}
+
 async function fetchSvg(path) {
   if (!svgCache.has(path)) {
     const request = fetch(path).then(async (response) => {
@@ -78,7 +137,23 @@ async function fetchSvg(path) {
   return svgCache.get(path);
 }
 
-export async function buildLayerMarkup(path, color, locked = false) {
+async function fetchClipMarkup(path) {
+  if (!clipMarkupCache.has(path)) {
+    const request = fetchSvg(path).then((source) => {
+      const document = parser.parseFromString(source, "image/svg+xml");
+      const svg = document.documentElement;
+      inlineClassStyles(svg);
+      normalizeRoot(svg);
+      return svg.innerHTML;
+    });
+    clipMarkupCache.set(path, request);
+  }
+
+  return clipMarkupCache.get(path);
+}
+
+export async function buildLayerMarkup(path, color, options = {}) {
+  const { clipPath = null, locked = false, transform = null } = options;
   const source = await fetchSvg(path);
   const document = parser.parseFromString(source, "image/svg+xml");
   const svg = document.documentElement;
@@ -89,6 +164,9 @@ export async function buildLayerMarkup(path, color, locked = false) {
   if (!locked) {
     tintSvg(svg, color);
   }
+
+  const clipMarkup = clipPath ? await fetchClipMarkup(clipPath) : null;
+  applyLayerOptions(svg, clipMarkup, transform);
 
   return serializer.serializeToString(svg);
 }

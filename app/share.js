@@ -1,9 +1,19 @@
 import { getAssetByShareCode, getAssetShareCode } from "./catalog.js";
-import { inflateState } from "./model.js";
+import {
+  inflateState,
+  isDefaultLayerTransform,
+  LAYER_TRANSFORM_LIMITS,
+  normalizeState,
+} from "./model.js";
 import { getPresetCode, getPresetColor } from "./palette.js";
 
 const decoder = new TextDecoder();
+const BASE64URL_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 const SHARE_PREFIX = "!";
+const LEGACY_TRANSFORM_MARKER = "-";
+const LEGACY_TRANSFORM_TOKEN_LENGTH = 4;
+const TRANSFORM_MARKER = "_";
+const TRANSFORM_TOKEN_LENGTH = 5;
 
 function bytesToBase64Url(bytes) {
   let binary = "";
@@ -42,6 +52,97 @@ function bytesToHexColor(bytes) {
   return `#${Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
 }
 
+function encodeFixedWidthValue(value, length) {
+  let remainder = value;
+  let result = "";
+  for (let index = 0; index < length; index += 1) {
+    result = `${BASE64URL_ALPHABET[remainder & 63]}${result}`;
+    remainder >>= 6;
+  }
+  return result;
+}
+
+function decodeFixedWidthValue(token) {
+  let value = 0;
+  for (const char of token) {
+    const index = BASE64URL_ALPHABET.indexOf(char);
+    if (index < 0) {
+      return null;
+    }
+    value = (value << 6) | index;
+  }
+  return value;
+}
+
+function decodeSignedTransformValue(value, bits, maxAbs) {
+  const offset = 1 << (bits - 1);
+  const bucketMax = offset - 1;
+  return Math.round(((value - offset) * maxAbs) / bucketMax);
+}
+
+function decodeScaleTransformValue(value) {
+  const { min, max } = LAYER_TRANSFORM_LIMITS.scale;
+  return Math.round(min + (value * (max - min)) / 31);
+}
+
+function encodeTransformToken(layer) {
+  const offsetXSpan = LAYER_TRANSFORM_LIMITS.offsetX.max - LAYER_TRANSFORM_LIMITS.offsetX.min + 1;
+  const offsetYSpan = LAYER_TRANSFORM_LIMITS.offsetY.max - LAYER_TRANSFORM_LIMITS.offsetY.min + 1;
+  const scaleSpan = LAYER_TRANSFORM_LIMITS.scale.max - LAYER_TRANSFORM_LIMITS.scale.min + 1;
+  const rotationSpan =
+    LAYER_TRANSFORM_LIMITS.rotation.max - LAYER_TRANSFORM_LIMITS.rotation.min + 1;
+  const packed =
+    (((layer.offsetX - LAYER_TRANSFORM_LIMITS.offsetX.min) * offsetYSpan +
+      (layer.offsetY - LAYER_TRANSFORM_LIMITS.offsetY.min)) *
+      scaleSpan +
+      (layer.scale - LAYER_TRANSFORM_LIMITS.scale.min)) *
+      rotationSpan +
+    (layer.rotation - LAYER_TRANSFORM_LIMITS.rotation.min);
+  return encodeFixedWidthValue(packed, TRANSFORM_TOKEN_LENGTH);
+}
+
+function decodeTransformToken(token) {
+  const packed = decodeFixedWidthValue(token);
+  if (packed === null) {
+    return null;
+  }
+
+  const offsetXSpan = LAYER_TRANSFORM_LIMITS.offsetX.max - LAYER_TRANSFORM_LIMITS.offsetX.min + 1;
+  const offsetYSpan = LAYER_TRANSFORM_LIMITS.offsetY.max - LAYER_TRANSFORM_LIMITS.offsetY.min + 1;
+  const scaleSpan = LAYER_TRANSFORM_LIMITS.scale.max - LAYER_TRANSFORM_LIMITS.scale.min + 1;
+  const rotationSpan =
+    LAYER_TRANSFORM_LIMITS.rotation.max - LAYER_TRANSFORM_LIMITS.rotation.min + 1;
+  const totalValues = offsetXSpan * offsetYSpan * scaleSpan * rotationSpan;
+  if (packed >= totalValues) {
+    return null;
+  }
+
+  let remainder = packed;
+  const rotation = (remainder % rotationSpan) + LAYER_TRANSFORM_LIMITS.rotation.min;
+  remainder = Math.floor(remainder / rotationSpan);
+  const scale = (remainder % scaleSpan) + LAYER_TRANSFORM_LIMITS.scale.min;
+  remainder = Math.floor(remainder / scaleSpan);
+  const offsetY = (remainder % offsetYSpan) + LAYER_TRANSFORM_LIMITS.offsetY.min;
+  remainder = Math.floor(remainder / offsetYSpan);
+  const offsetX = remainder + LAYER_TRANSFORM_LIMITS.offsetX.min;
+
+  return { offsetX, offsetY, scale, rotation };
+}
+
+function decodeLegacyTransformToken(token) {
+  const packed = decodeFixedWidthValue(token);
+  if (packed === null) {
+    return null;
+  }
+
+  return {
+    offsetX: decodeSignedTransformValue((packed >> 15) & 0b111111, 6, LAYER_TRANSFORM_LIMITS.offsetX.max),
+    offsetY: decodeSignedTransformValue((packed >> 9) & 0b111111, 6, LAYER_TRANSFORM_LIMITS.offsetY.max),
+    rotation: decodeSignedTransformValue(packed & 0b1111, 4, LAYER_TRANSFORM_LIMITS.rotation.max),
+    scale: decodeScaleTransformValue((packed >> 4) & 0b11111)
+  };
+}
+
 function encodeCompactState(state) {
   const baseToken = colorToToken(state.baseColor);
   const layerTokens = state.layers
@@ -50,7 +151,10 @@ function encodeCompactState(state) {
       if (assetCode === null) {
         throw new Error("Unknown asset");
       }
-      return `${assetCode}${colorToToken(layer.color)}`;
+      const transformToken = isDefaultLayerTransform(layer)
+        ? ""
+        : `${TRANSFORM_MARKER}${encodeTransformToken(layer)}`;
+      return `${assetCode}${colorToToken(layer.color)}${transformToken}`;
     })
     .join("");
   return `${SHARE_PREFIX}${baseToken}${layerTokens}`;
@@ -91,23 +195,42 @@ function decodeCompactState(payload) {
       }
 
       cursor += 2;
-      const color = tokenToColor(colorMode);
-      if (color) {
-        layers.push({ assetId, color });
-        continue;
+      let layerColor = tokenToColor(colorMode);
+      if (!layerColor) {
+        if (colorMode !== "~") {
+          return null;
+        }
+
+        layerColor = bytesToHexColor(base64UrlToBytes(payload.slice(cursor, cursor + 4)));
+        if (!layerColor) {
+          return null;
+        }
+
+        cursor += 4;
       }
 
-      if (colorMode !== "~") {
-        return null;
+      const layer = { assetId, color: layerColor };
+      if (payload[cursor] === TRANSFORM_MARKER) {
+        const transform = decodeTransformToken(
+          payload.slice(cursor + 1, cursor + 1 + TRANSFORM_TOKEN_LENGTH)
+        );
+        if (!transform) {
+          return null;
+        }
+        Object.assign(layer, transform);
+        cursor += 1 + TRANSFORM_TOKEN_LENGTH;
+      } else if (payload[cursor] === LEGACY_TRANSFORM_MARKER) {
+        const transform = decodeLegacyTransformToken(
+          payload.slice(cursor + 1, cursor + 1 + LEGACY_TRANSFORM_TOKEN_LENGTH)
+        );
+        if (!transform) {
+          return null;
+        }
+        Object.assign(layer, transform);
+        cursor += 1 + LEGACY_TRANSFORM_TOKEN_LENGTH;
       }
 
-      const rawColor = bytesToHexColor(base64UrlToBytes(payload.slice(cursor, cursor + 4)));
-      if (!rawColor) {
-        return null;
-      }
-
-      layers.push({ assetId, color: rawColor });
-      cursor += 4;
+      layers.push(layer);
     }
 
     return inflateState({ baseColor, layers });
@@ -120,17 +243,6 @@ function decodeLegacyState(payload) {
   try {
     const json = decoder.decode(base64UrlToBytes(payload));
     const parsed = JSON.parse(json);
-    if (parsed && typeof parsed === "object" && "b" in parsed && "l" in parsed) {
-      return inflateState({
-        baseColor: parsed.b,
-        layers: Array.isArray(parsed.l)
-          ? parsed.l.map((entry) => ({
-              assetId: Array.isArray(entry) ? entry[0] : "",
-              color: Array.isArray(entry) ? entry[1] : ""
-            }))
-          : []
-      });
-    }
     return inflateState(parsed);
   } catch {
     return null;
@@ -138,7 +250,8 @@ function decodeLegacyState(payload) {
 }
 
 export function encodeState(state) {
-  return encodeCompactState(state);
+  const normalized = normalizeState(state);
+  return encodeCompactState(normalized);
 }
 
 export function decodeState(payload) {
