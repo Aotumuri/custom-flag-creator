@@ -78,6 +78,31 @@ test("inflateState accepts legacy serialized state objects", () => {
   );
 });
 
+test("inflateState expands legacy uniform scale entries", () => {
+  assert.deepEqual(
+    simplify(
+      inflateState({
+        b: "ffffff",
+        l: [["center_star", "c1121f", 8, -6, 140, 18]]
+      })
+    ),
+    {
+      baseColor: "#ffffff",
+      layers: [
+        {
+          assetId: "center_star",
+          color: "#c1121f",
+          offsetX: 8,
+          offsetY: -6,
+          scaleX: 140,
+          scaleY: 140,
+          rotation: 18
+        }
+      ]
+    }
+  );
+});
+
 test("inflateState clamps transform controls into supported ranges", () => {
   assert.deepEqual(
     simplify(

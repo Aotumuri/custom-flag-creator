@@ -132,48 +132,47 @@ export function normalizeState(value) {
   };
 }
 
-export function serializeState(state) {
+function hasNormalizedStateShape(raw) {
+  return "baseColor" in raw || "layers" in raw;
+}
+
+function inflateLegacyLayer(entry) {
+  if (!Array.isArray(entry)) {
+    return {
+      assetId: "",
+      color: DEFAULT_LAYER_COLOR,
+      ...DEFAULT_LAYER_TRANSFORM
+    };
+  }
+
+  const hasSeparateScales = entry.length > 6;
+  const uniformScale = entry[4];
   return {
-    baseColor: state.baseColor,
-    layers: state.layers.map((layer) => ({
-      assetId: layer.assetId,
-      color: layer.color,
-      offsetX: layer.offsetX,
-      offsetY: layer.offsetY,
-      scaleX: layer.scaleX,
-      scaleY: layer.scaleY,
-      rotation: layer.rotation
-    }))
+    assetId: entry[0],
+    color: entry[1],
+    offsetX: entry[2],
+    offsetY: entry[3],
+    scaleX: hasSeparateScales ? entry[4] : uniformScale,
+    scaleY: hasSeparateScales ? entry[5] : uniformScale,
+    rotation: entry[hasSeparateScales ? 6 : 5]
   };
+}
+
+function inflateLegacyState(raw) {
+  const layers = Array.isArray(raw.l) ? raw.l : [];
+  return normalizeState({
+    baseColor: raw.b,
+    layers: layers.map(inflateLegacyLayer)
+  });
 }
 
 export function inflateState(value) {
   const raw = value ?? {};
-  if ("baseColor" in raw || "layers" in raw) {
+  if (hasNormalizedStateShape(raw)) {
     return normalizeState({
       baseColor: raw.baseColor,
       layers: Array.isArray(raw.layers) ? raw.layers : []
     });
   }
-
-  const layers = Array.isArray(raw.l) ? raw.l : [];
-
-  return normalizeState({
-    baseColor: raw.b,
-    layers: layers.map((entry) => {
-      const hasSeparateScales = Array.isArray(entry) && entry.length > 6;
-      const legacyScale = Array.isArray(entry) ? entry[4] : DEFAULT_LAYER_TRANSFORM.scaleX;
-      return {
-        assetId: Array.isArray(entry) ? entry[0] : "",
-        color: Array.isArray(entry) ? entry[1] : DEFAULT_LAYER_COLOR,
-        offsetX: Array.isArray(entry) ? entry[2] : DEFAULT_LAYER_TRANSFORM.offsetX,
-        offsetY: Array.isArray(entry) ? entry[3] : DEFAULT_LAYER_TRANSFORM.offsetY,
-        scaleX: hasSeparateScales ? entry[4] : legacyScale,
-        scaleY: hasSeparateScales ? entry[5] : legacyScale,
-        rotation: Array.isArray(entry)
-          ? entry[hasSeparateScales ? 6 : 5]
-          : DEFAULT_LAYER_TRANSFORM.rotation
-      };
-    })
-  });
+  return inflateLegacyState(raw);
 }
