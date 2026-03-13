@@ -102,6 +102,10 @@ const groups = [
   { id: "symbols", title: "Symbols and marks" }
 ];
 
+function createAssetUrl(fileName) {
+  return new URL(`../custom/${fileName}`, import.meta.url).href;
+}
+
 function getGroupId(assetId) {
   if (
     assetId.startsWith("half_") ||
@@ -123,13 +127,13 @@ function getGroupId(assetId) {
 export const BASE_LAYER = {
   id: "full",
   label: "Base field",
-  path: "./custom/full.svg"
+  path: createAssetUrl("full.svg")
 };
 
 export const FRAME_LAYER = {
   id: "frame",
   label: "Frame",
-  path: "./custom/frame.svg"
+  path: createAssetUrl("frame.svg")
 };
 
 export const assetGroups = groups;
@@ -138,8 +142,8 @@ export const assets = assetDefinitions.map(([assetId, shareCode]) => ({
   id: assetId,
   label: labels[assetId] ?? assetId.replaceAll("_", " "),
   groupId: getGroupId(assetId),
-  path: `./custom/${assetId}.svg`,
-  thumbPath: `./custom/${assetId}.svg`,
+  path: createAssetUrl(`${assetId}.svg`),
+  thumbPath: createAssetUrl(`${assetId}.svg`),
   shareCode
 }));
 
