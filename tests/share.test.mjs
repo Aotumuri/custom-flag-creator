@@ -6,12 +6,13 @@ import { decodeState, encodeState } from "../app/share.js";
 function simplify(state) {
   return {
     baseColor: state.baseColor,
-    layers: state.layers.map(({ assetId, color, offsetX, offsetY, scale, rotation }) => ({
+    layers: state.layers.map(({ assetId, color, offsetX, offsetY, scaleX, scaleY, rotation }) => ({
       assetId,
       color,
       offsetX,
       offsetY,
-      scale,
+      scaleX,
+      scaleY,
       rotation
     }))
   };
@@ -43,7 +44,8 @@ test("encodeState keeps stable compact tokens for preset colors", () => {
         color: "#c1121f",
         offsetX: 0,
         offsetY: 0,
-        scale: 100,
+        scaleX: 100,
+        scaleY: 100,
         rotation: 0
       },
       {
@@ -51,7 +53,8 @@ test("encodeState keeps stable compact tokens for preset colors", () => {
         color: "#118ab2",
         offsetX: 0,
         offsetY: 0,
-        scale: 100,
+        scaleX: 100,
+        scaleY: 100,
         rotation: 0
       }
     ]
@@ -73,7 +76,8 @@ test("encodeState round-trips arbitrary hex colors", () => {
         color: "#abcdef",
         offsetX: 0,
         offsetY: 0,
-        scale: 100,
+        scaleX: 100,
+        scaleY: 100,
         rotation: 0
       }
     ]
@@ -90,13 +94,14 @@ test("encodeState keeps transform controls in compact tokens", () => {
         color: "#c1121f",
         offsetX: 8,
         offsetY: -6,
-        scale: 140,
+        scaleX: 140,
+        scaleY: 90,
         rotation: 18
       }
     ]
   });
 
-  assert.equal(payload, "!0b4_Tmtko");
+  assert.equal(payload, "!0b4.BWE9-cO");
   assert.deepEqual(simplify(decodeState(payload)), {
     baseColor: "#ffffff",
     layers: [
@@ -105,24 +110,55 @@ test("encodeState keeps transform controls in compact tokens", () => {
         color: "#c1121f",
         offsetX: 8,
         offsetY: -6,
-        scale: 140,
+        scaleX: 140,
+        scaleY: 90,
         rotation: 18
       }
     ]
   });
 });
 
-test("encodeState changes token for each scale increment", () => {
+test("encodeState changes token for each scaleX increment", () => {
   const scale140 = encodeState({
     baseColor: "#ffffff",
-    layers: [{ id: "x", assetId: "center_star", color: "#c1121f", scale: 140 }]
+    layers: [{ id: "x", assetId: "center_star", color: "#c1121f", scaleX: 140 }]
   });
   const scale141 = encodeState({
     baseColor: "#ffffff",
-    layers: [{ id: "x", assetId: "center_star", color: "#c1121f", scale: 141 }]
+    layers: [{ id: "x", assetId: "center_star", color: "#c1121f", scaleX: 141 }]
   });
 
   assert.notEqual(scale140, scale141);
+});
+
+test("encodeState changes token for each scaleY increment", () => {
+  const scale90 = encodeState({
+    baseColor: "#ffffff",
+    layers: [{ id: "x", assetId: "center_star", color: "#c1121f", scaleY: 90 }]
+  });
+  const scale91 = encodeState({
+    baseColor: "#ffffff",
+    layers: [{ id: "x", assetId: "center_star", color: "#c1121f", scaleY: 91 }]
+  });
+
+  assert.notEqual(scale90, scale91);
+});
+
+test("decodeState supports prior exact uniform transform tokens", () => {
+  assert.deepEqual(simplify(decodeState("!0b4_Tmtko")), {
+    baseColor: "#ffffff",
+    layers: [
+      {
+        assetId: "center_star",
+        color: "#c1121f",
+        offsetX: 8,
+        offsetY: -6,
+        scaleX: 140,
+        scaleY: 140,
+        rotation: 18
+      }
+    ]
+  });
 });
 
 test("decodeState supports legacy compact transform tokens", () => {
@@ -134,7 +170,8 @@ test("decodeState supports legacy compact transform tokens", () => {
         color: "#c1121f",
         offsetX: 8,
         offsetY: -6,
-        scale: 137,
+        scaleX: 137,
+        scaleY: 137,
         rotation: 26
       }
     ]
@@ -158,7 +195,8 @@ test("decodeState supports legacy base64url payloads", () => {
         color: "#c1121f",
         offsetX: 0,
         offsetY: 0,
-        scale: 100,
+        scaleX: 100,
+        scaleY: 100,
         rotation: 0
       }
     ]

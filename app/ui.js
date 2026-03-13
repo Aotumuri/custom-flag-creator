@@ -5,7 +5,8 @@ import { COLOR_PRESETS } from "./palette.js";
 const TRANSFORM_FIELDS = [
   { field: "offsetX", label: "X", suffix: "" },
   { field: "offsetY", label: "Y", suffix: "" },
-  { field: "scale", label: "Size", suffix: "%" },
+  { field: "scaleX", label: "Size X", suffix: "%" },
+  { field: "scaleY", label: "Size Y", suffix: "%" },
   { field: "rotation", label: "Tilt", suffix: "deg" }
 ];
 

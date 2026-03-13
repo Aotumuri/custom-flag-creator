@@ -5,19 +5,22 @@ export const DEFAULT_LAYER_COLOR = "#e60012";
 export const DEFAULT_LAYER_TRANSFORM = Object.freeze({
   offsetX: 0,
   offsetY: 0,
-  scale: 100,
+  scaleX: 100,
+  scaleY: 100,
   rotation: 0
 });
 export const LAYER_TRANSFORM_FIELDS = new Set([
   "offsetX",
   "offsetY",
-  "scale",
+  "scaleX",
+  "scaleY",
   "rotation"
 ]);
 export const LAYER_TRANSFORM_LIMITS = Object.freeze({
   offsetX: Object.freeze({ min: -36, max: 36, step: 1 }),
   offsetY: Object.freeze({ min: -36, max: 36, step: 1 }),
-  scale: Object.freeze({ min: 20, max: 300, step: 1 }),
+  scaleX: Object.freeze({ min: 20, max: 300, step: 1 }),
+  scaleY: Object.freeze({ min: 20, max: 300, step: 1 }),
   rotation: Object.freeze({ min: -180, max: 180, step: 1 })
 });
 
@@ -50,6 +53,7 @@ function normalizeNumber(value, fallback, limits) {
 
 export function normalizeLayerTransform(value) {
   const raw = value ?? {};
+  const fallbackScale = raw.scale;
   return {
     offsetX: normalizeNumber(
       raw.offsetX,
@@ -61,7 +65,16 @@ export function normalizeLayerTransform(value) {
       DEFAULT_LAYER_TRANSFORM.offsetY,
       LAYER_TRANSFORM_LIMITS.offsetY
     ),
-    scale: normalizeNumber(raw.scale, DEFAULT_LAYER_TRANSFORM.scale, LAYER_TRANSFORM_LIMITS.scale),
+    scaleX: normalizeNumber(
+      raw.scaleX ?? fallbackScale,
+      DEFAULT_LAYER_TRANSFORM.scaleX,
+      LAYER_TRANSFORM_LIMITS.scaleX
+    ),
+    scaleY: normalizeNumber(
+      raw.scaleY ?? fallbackScale,
+      DEFAULT_LAYER_TRANSFORM.scaleY,
+      LAYER_TRANSFORM_LIMITS.scaleY
+    ),
     rotation: normalizeNumber(
       raw.rotation,
       DEFAULT_LAYER_TRANSFORM.rotation,
@@ -74,7 +87,8 @@ export function isDefaultLayerTransform(layer) {
   return (
     layer.offsetX === DEFAULT_LAYER_TRANSFORM.offsetX &&
     layer.offsetY === DEFAULT_LAYER_TRANSFORM.offsetY &&
-    layer.scale === DEFAULT_LAYER_TRANSFORM.scale &&
+    layer.scaleX === DEFAULT_LAYER_TRANSFORM.scaleX &&
+    layer.scaleY === DEFAULT_LAYER_TRANSFORM.scaleY &&
     layer.rotation === DEFAULT_LAYER_TRANSFORM.rotation
   );
 }
@@ -126,7 +140,8 @@ export function serializeState(state) {
       color: layer.color,
       offsetX: layer.offsetX,
       offsetY: layer.offsetY,
-      scale: layer.scale,
+      scaleX: layer.scaleX,
+      scaleY: layer.scaleY,
       rotation: layer.rotation
     }))
   };
@@ -145,13 +160,20 @@ export function inflateState(value) {
 
   return normalizeState({
     baseColor: raw.b,
-    layers: layers.map((entry) => ({
-      assetId: Array.isArray(entry) ? entry[0] : "",
-      color: Array.isArray(entry) ? entry[1] : DEFAULT_LAYER_COLOR,
-      offsetX: Array.isArray(entry) ? entry[2] : DEFAULT_LAYER_TRANSFORM.offsetX,
-      offsetY: Array.isArray(entry) ? entry[3] : DEFAULT_LAYER_TRANSFORM.offsetY,
-      scale: Array.isArray(entry) ? entry[4] : DEFAULT_LAYER_TRANSFORM.scale,
-      rotation: Array.isArray(entry) ? entry[5] : DEFAULT_LAYER_TRANSFORM.rotation
-    }))
+    layers: layers.map((entry) => {
+      const hasSeparateScales = Array.isArray(entry) && entry.length > 6;
+      const legacyScale = Array.isArray(entry) ? entry[4] : DEFAULT_LAYER_TRANSFORM.scaleX;
+      return {
+        assetId: Array.isArray(entry) ? entry[0] : "",
+        color: Array.isArray(entry) ? entry[1] : DEFAULT_LAYER_COLOR,
+        offsetX: Array.isArray(entry) ? entry[2] : DEFAULT_LAYER_TRANSFORM.offsetX,
+        offsetY: Array.isArray(entry) ? entry[3] : DEFAULT_LAYER_TRANSFORM.offsetY,
+        scaleX: hasSeparateScales ? entry[4] : legacyScale,
+        scaleY: hasSeparateScales ? entry[5] : legacyScale,
+        rotation: Array.isArray(entry)
+          ? entry[hasSeparateScales ? 6 : 5]
+          : DEFAULT_LAYER_TRANSFORM.rotation
+      };
+    })
   });
 }

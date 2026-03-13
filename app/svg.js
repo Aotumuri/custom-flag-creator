@@ -68,10 +68,11 @@ function normalizeRoot(svg) {
 function wrapLayerMarkup(markup, transform) {
   let result = markup;
 
-  if (transform.scale !== 100) {
-    const scale = transform.scale / 100;
+  if (transform.scaleX !== 100 || transform.scaleY !== 100) {
+    const scaleX = transform.scaleX / 100;
+    const scaleY = transform.scaleY / 100;
     result = `
-      <g transform="translate(${SVG_CENTER} ${SVG_CENTER}) scale(${scale}) translate(${-SVG_CENTER} ${-SVG_CENTER})">
+      <g transform="translate(${SVG_CENTER} ${SVG_CENTER}) scale(${scaleX} ${scaleY}) translate(${-SVG_CENTER} ${-SVG_CENTER})">
         ${result}
       </g>
     `;

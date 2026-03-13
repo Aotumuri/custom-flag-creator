@@ -3,7 +3,7 @@ import {
   inflateState,
   isDefaultLayerTransform,
   LAYER_TRANSFORM_LIMITS,
-  normalizeState,
+  normalizeState
 } from "./model.js";
 import { getPresetCode, getPresetColor } from "./palette.js";
 
@@ -12,8 +12,10 @@ const BASE64URL_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
 const SHARE_PREFIX = "!";
 const LEGACY_TRANSFORM_MARKER = "-";
 const LEGACY_TRANSFORM_TOKEN_LENGTH = 4;
-const TRANSFORM_MARKER = "_";
-const TRANSFORM_TOKEN_LENGTH = 5;
+const LEGACY_UNIFORM_TRANSFORM_MARKER = "_";
+const LEGACY_UNIFORM_TRANSFORM_TOKEN_LENGTH = 5;
+const TRANSFORM_MARKER = ".";
+const TRANSFORM_TOKEN_LENGTH = 7;
 
 function bytesToBase64Url(bytes) {
   let binary = "";
@@ -56,8 +58,8 @@ function encodeFixedWidthValue(value, length) {
   let remainder = value;
   let result = "";
   for (let index = 0; index < length; index += 1) {
-    result = `${BASE64URL_ALPHABET[remainder & 63]}${result}`;
-    remainder >>= 6;
+    result = `${BASE64URL_ALPHABET[remainder % 64]}${result}`;
+    remainder = Math.floor(remainder / 64);
   }
   return result;
 }
@@ -69,7 +71,7 @@ function decodeFixedWidthValue(token) {
     if (index < 0) {
       return null;
     }
-    value = (value << 6) | index;
+    value = value * 64 + index;
   }
   return value;
 }
@@ -81,21 +83,24 @@ function decodeSignedTransformValue(value, bits, maxAbs) {
 }
 
 function decodeScaleTransformValue(value) {
-  const { min, max } = LAYER_TRANSFORM_LIMITS.scale;
+  const { min, max } = LAYER_TRANSFORM_LIMITS.scaleX;
   return Math.round(min + (value * (max - min)) / 31);
 }
 
 function encodeTransformToken(layer) {
   const offsetXSpan = LAYER_TRANSFORM_LIMITS.offsetX.max - LAYER_TRANSFORM_LIMITS.offsetX.min + 1;
   const offsetYSpan = LAYER_TRANSFORM_LIMITS.offsetY.max - LAYER_TRANSFORM_LIMITS.offsetY.min + 1;
-  const scaleSpan = LAYER_TRANSFORM_LIMITS.scale.max - LAYER_TRANSFORM_LIMITS.scale.min + 1;
+  const scaleXSpan = LAYER_TRANSFORM_LIMITS.scaleX.max - LAYER_TRANSFORM_LIMITS.scaleX.min + 1;
+  const scaleYSpan = LAYER_TRANSFORM_LIMITS.scaleY.max - LAYER_TRANSFORM_LIMITS.scaleY.min + 1;
   const rotationSpan =
     LAYER_TRANSFORM_LIMITS.rotation.max - LAYER_TRANSFORM_LIMITS.rotation.min + 1;
   const packed =
-    (((layer.offsetX - LAYER_TRANSFORM_LIMITS.offsetX.min) * offsetYSpan +
+    ((((layer.offsetX - LAYER_TRANSFORM_LIMITS.offsetX.min) * offsetYSpan +
       (layer.offsetY - LAYER_TRANSFORM_LIMITS.offsetY.min)) *
-      scaleSpan +
-      (layer.scale - LAYER_TRANSFORM_LIMITS.scale.min)) *
+      scaleXSpan +
+      (layer.scaleX - LAYER_TRANSFORM_LIMITS.scaleX.min)) *
+      scaleYSpan +
+      (layer.scaleY - LAYER_TRANSFORM_LIMITS.scaleY.min)) *
       rotationSpan +
     (layer.rotation - LAYER_TRANSFORM_LIMITS.rotation.min);
   return encodeFixedWidthValue(packed, TRANSFORM_TOKEN_LENGTH);
@@ -109,10 +114,11 @@ function decodeTransformToken(token) {
 
   const offsetXSpan = LAYER_TRANSFORM_LIMITS.offsetX.max - LAYER_TRANSFORM_LIMITS.offsetX.min + 1;
   const offsetYSpan = LAYER_TRANSFORM_LIMITS.offsetY.max - LAYER_TRANSFORM_LIMITS.offsetY.min + 1;
-  const scaleSpan = LAYER_TRANSFORM_LIMITS.scale.max - LAYER_TRANSFORM_LIMITS.scale.min + 1;
+  const scaleXSpan = LAYER_TRANSFORM_LIMITS.scaleX.max - LAYER_TRANSFORM_LIMITS.scaleX.min + 1;
+  const scaleYSpan = LAYER_TRANSFORM_LIMITS.scaleY.max - LAYER_TRANSFORM_LIMITS.scaleY.min + 1;
   const rotationSpan =
     LAYER_TRANSFORM_LIMITS.rotation.max - LAYER_TRANSFORM_LIMITS.rotation.min + 1;
-  const totalValues = offsetXSpan * offsetYSpan * scaleSpan * rotationSpan;
+  const totalValues = offsetXSpan * offsetYSpan * scaleXSpan * scaleYSpan * rotationSpan;
   if (packed >= totalValues) {
     return null;
   }
@@ -120,13 +126,15 @@ function decodeTransformToken(token) {
   let remainder = packed;
   const rotation = (remainder % rotationSpan) + LAYER_TRANSFORM_LIMITS.rotation.min;
   remainder = Math.floor(remainder / rotationSpan);
-  const scale = (remainder % scaleSpan) + LAYER_TRANSFORM_LIMITS.scale.min;
-  remainder = Math.floor(remainder / scaleSpan);
+  const scaleY = (remainder % scaleYSpan) + LAYER_TRANSFORM_LIMITS.scaleY.min;
+  remainder = Math.floor(remainder / scaleYSpan);
+  const scaleX = (remainder % scaleXSpan) + LAYER_TRANSFORM_LIMITS.scaleX.min;
+  remainder = Math.floor(remainder / scaleXSpan);
   const offsetY = (remainder % offsetYSpan) + LAYER_TRANSFORM_LIMITS.offsetY.min;
   remainder = Math.floor(remainder / offsetYSpan);
   const offsetX = remainder + LAYER_TRANSFORM_LIMITS.offsetX.min;
 
-  return { offsetX, offsetY, scale, rotation };
+  return { offsetX, offsetY, scaleX, scaleY, rotation };
 }
 
 function decodeLegacyTransformToken(token) {
@@ -139,8 +147,37 @@ function decodeLegacyTransformToken(token) {
     offsetX: decodeSignedTransformValue((packed >> 15) & 0b111111, 6, LAYER_TRANSFORM_LIMITS.offsetX.max),
     offsetY: decodeSignedTransformValue((packed >> 9) & 0b111111, 6, LAYER_TRANSFORM_LIMITS.offsetY.max),
     rotation: decodeSignedTransformValue(packed & 0b1111, 4, LAYER_TRANSFORM_LIMITS.rotation.max),
-    scale: decodeScaleTransformValue((packed >> 4) & 0b11111)
+    scaleX: decodeScaleTransformValue((packed >> 4) & 0b11111),
+    scaleY: decodeScaleTransformValue((packed >> 4) & 0b11111)
   };
+}
+
+function decodeLegacyUniformTransformToken(token) {
+  const packed = decodeFixedWidthValue(token);
+  if (packed === null) {
+    return null;
+  }
+
+  const offsetXSpan = LAYER_TRANSFORM_LIMITS.offsetX.max - LAYER_TRANSFORM_LIMITS.offsetX.min + 1;
+  const offsetYSpan = LAYER_TRANSFORM_LIMITS.offsetY.max - LAYER_TRANSFORM_LIMITS.offsetY.min + 1;
+  const scaleSpan = LAYER_TRANSFORM_LIMITS.scaleX.max - LAYER_TRANSFORM_LIMITS.scaleX.min + 1;
+  const rotationSpan =
+    LAYER_TRANSFORM_LIMITS.rotation.max - LAYER_TRANSFORM_LIMITS.rotation.min + 1;
+  const totalValues = offsetXSpan * offsetYSpan * scaleSpan * rotationSpan;
+  if (packed >= totalValues) {
+    return null;
+  }
+
+  let remainder = packed;
+  const rotation = (remainder % rotationSpan) + LAYER_TRANSFORM_LIMITS.rotation.min;
+  remainder = Math.floor(remainder / rotationSpan);
+  const scale = (remainder % scaleSpan) + LAYER_TRANSFORM_LIMITS.scaleX.min;
+  remainder = Math.floor(remainder / scaleSpan);
+  const offsetY = (remainder % offsetYSpan) + LAYER_TRANSFORM_LIMITS.offsetY.min;
+  remainder = Math.floor(remainder / offsetYSpan);
+  const offsetX = remainder + LAYER_TRANSFORM_LIMITS.offsetX.min;
+
+  return { offsetX, offsetY, scaleX: scale, scaleY: scale, rotation };
 }
 
 function encodeCompactState(state) {
@@ -219,6 +256,15 @@ function decodeCompactState(payload) {
         }
         Object.assign(layer, transform);
         cursor += 1 + TRANSFORM_TOKEN_LENGTH;
+      } else if (payload[cursor] === LEGACY_UNIFORM_TRANSFORM_MARKER) {
+        const transform = decodeLegacyUniformTransformToken(
+          payload.slice(cursor + 1, cursor + 1 + LEGACY_UNIFORM_TRANSFORM_TOKEN_LENGTH)
+        );
+        if (!transform) {
+          return null;
+        }
+        Object.assign(layer, transform);
+        cursor += 1 + LEGACY_UNIFORM_TRANSFORM_TOKEN_LENGTH;
       } else if (payload[cursor] === LEGACY_TRANSFORM_MARKER) {
         const transform = decodeLegacyTransformToken(
           payload.slice(cursor + 1, cursor + 1 + LEGACY_TRANSFORM_TOKEN_LENGTH)
