@@ -6,6 +6,7 @@ import {
   normalizeState
 } from "./model.js";
 import { renderLayerThumbs } from "./layer-thumbs.js";
+import { createLinkControls } from "./link-controls.js";
 import { buildPreviewNodes } from "./preview.js";
 import { buildStandaloneSvgUrl, readStateFromUrl, writeStateToUrl } from "./share.js";
 import { renderAssetLibrary, renderBasePresets, renderLayers, syncLayerControls } from "./ui.js";
@@ -26,23 +27,12 @@ const refs = {
 };
 
 let state = createDefaultState();
-let activeLinkMode = "share";
 let previewToken = 0;
-let shareUrls = { share: "", svg: "" };
+const linkControls = createLinkControls(refs);
 
 function setStatus(message, tone = "neutral") {
   refs.statusMessage.textContent = message;
   refs.statusMessage.dataset.tone = tone;
-}
-
-function syncActiveLinkUi() {
-  refs.activeUrl.value = shareUrls[activeLinkMode] ?? "";
-  refs.openLink.href = shareUrls[activeLinkMode] || "./";
-  refs.linkModeButtons.forEach((button) => {
-    const selected = button.dataset.linkMode === activeLinkMode;
-    button.classList.toggle("is-selected", selected);
-    button.setAttribute("aria-selected", String(selected));
-  });
 }
 
 async function renderPreview() {
@@ -54,12 +44,11 @@ async function renderPreview() {
   refs.flagPreview.innerHTML = "";
   nodes.forEach((node) => refs.flagPreview.appendChild(node));
 }
+
 function syncShareField() {
-  shareUrls = { share: "Generating...", svg: "Generating..." };
-  syncActiveLinkUi();
+  linkControls.setPending();
   syncShareUrl().catch(() => {
-    shareUrls = { share: "", svg: "" };
-    syncActiveLinkUi();
+    linkControls.clear();
     setStatus("Link could not be updated.", "error");
   });
 }
@@ -141,15 +130,15 @@ function removeLayer(layerId) {
 }
 
 async function syncShareUrl(copyToClipboard = false) {
-  const url = writeStateToUrl(state);
-  const svgUrl = buildStandaloneSvgUrl(state);
-  shareUrls = { share: url, svg: svgUrl };
-  syncActiveLinkUi();
+  linkControls.setUrls({
+    share: writeStateToUrl(state),
+    svg: buildStandaloneSvgUrl(state)
+  });
   if (!copyToClipboard) {
     setStatus("Link ready.", "success");
     return;
   }
-  const activeUrl = shareUrls[activeLinkMode];
+  const activeUrl = linkControls.getActiveUrl();
   if (!navigator.clipboard?.writeText) {
     setStatus("Link generated. Copy it from the field.", "success");
     return;
@@ -163,12 +152,7 @@ async function syncShareUrl(copyToClipboard = false) {
 }
 
 function bindEvents() {
-  refs.linkModeButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      activeLinkMode = button.dataset.linkMode;
-      syncActiveLinkUi();
-    });
-  });
+  linkControls.bindModeButtons();
   refs.assetLibrary.addEventListener("click", (event) => {
     const button = event.target.closest("[data-add-layer]");
     if (!button) {
@@ -240,9 +224,9 @@ function bindEvents() {
   });
 
   refs.copyLink.addEventListener("click", () => {
-    refs.activeUrl.value = "Generating...";
+    linkControls.setPending();
     syncShareUrl(true).catch(() => {
-      syncActiveLinkUi();
+      linkControls.sync();
       setStatus("Link could not be copied.", "error");
     });
   });
