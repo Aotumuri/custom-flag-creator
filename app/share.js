@@ -309,6 +309,13 @@ export function readStateFromUrl() {
   return match ? decodeState(match[1]) : null;
 }
 
+export function buildStandaloneSvgUrl(state) {
+  const payload = encodeState(state);
+  const nextUrl = new URL("./svg/", window.location.href);
+  nextUrl.hash = `f=${payload}`;
+  return nextUrl.toString();
+}
+
 export function writeStateToUrl(state) {
   const payload = encodeState(state);
   const nextUrl = new URL(window.location.href);

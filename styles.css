@@ -37,16 +37,16 @@ code {
 .shell {
   height: 100dvh;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 12px;
   padding: 12px;
 }
 
 .topbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 12px;
-  align-items: center;
-  justify-content: space-between;
+  align-items: start;
 }
 
 .title-block h1,
@@ -73,16 +73,43 @@ code {
   font-size: 0.87rem;
 }
 
-.topbar-actions {
+.title-meta {
   display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
+.topbar-actions {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 8px;
-  align-items: center;
+  align-items: start;
   min-width: 0;
 }
 
+.share-stack {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.share-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.topbar-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .share-field {
-  flex: 1 1 360px;
-  min-width: min(44vw, 420px);
+  min-width: 0;
 }
 
 .workspace {
@@ -140,19 +167,18 @@ code {
     grid-template-columns: 1fr;
   }
 
-  .topbar {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
   .topbar-actions {
-    width: 100%;
-    flex-wrap: wrap;
+    grid-template-columns: 1fr;
   }
 
-  .share-field {
-    min-width: 0;
-    flex: 1 1 100%;
+  .title-meta {
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+  }
+
+  .topbar-buttons {
+    justify-content: stretch;
   }
 
   .workspace {

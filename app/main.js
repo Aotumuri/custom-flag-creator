@@ -7,28 +7,44 @@ import {
 } from "./model.js";
 import { renderLayerThumbs } from "./layer-thumbs.js";
 import { buildPreviewNodes } from "./preview.js";
-import { readStateFromUrl, writeStateToUrl } from "./share.js";
+import { buildStandaloneSvgUrl, readStateFromUrl, writeStateToUrl } from "./share.js";
 import { renderAssetLibrary, renderBasePresets, renderLayers, syncLayerControls } from "./ui.js";
 
 const refs = {
   assetLibrary: document.querySelector("#asset-library"),
+  activeUrl: document.querySelector("#active-url"),
   baseColor: document.querySelector("#base-color"),
   basePresets: document.querySelector("#base-presets"),
   copyLink: document.querySelector("#copy-link"),
   emptyLayers: document.querySelector("#empty-layers"),
   flagPreview: document.querySelector("#flag-preview"),
   layersList: document.querySelector("#layers-list"),
+  linkModeButtons: document.querySelectorAll("[data-link-mode]"),
+  openLink: document.querySelector("#open-link"),
   resetFlag: document.querySelector("#reset-flag"),
-  shareUrl: document.querySelector("#share-url"),
   statusMessage: document.querySelector("#status-message")
 };
 
 let state = createDefaultState();
+let activeLinkMode = "share";
 let previewToken = 0;
+let shareUrls = { share: "", svg: "" };
+
 function setStatus(message, tone = "neutral") {
   refs.statusMessage.textContent = message;
   refs.statusMessage.dataset.tone = tone;
 }
+
+function syncActiveLinkUi() {
+  refs.activeUrl.value = shareUrls[activeLinkMode] ?? "";
+  refs.openLink.href = shareUrls[activeLinkMode] || "./";
+  refs.linkModeButtons.forEach((button) => {
+    const selected = button.dataset.linkMode === activeLinkMode;
+    button.classList.toggle("is-selected", selected);
+    button.setAttribute("aria-selected", String(selected));
+  });
+}
+
 async function renderPreview() {
   const token = ++previewToken;
   const nodes = await buildPreviewNodes(state);
@@ -39,10 +55,12 @@ async function renderPreview() {
   nodes.forEach((node) => refs.flagPreview.appendChild(node));
 }
 function syncShareField() {
-  refs.shareUrl.value = "Generating...";
+  shareUrls = { share: "Generating...", svg: "Generating..." };
+  syncActiveLinkUi();
   syncShareUrl().catch(() => {
-    refs.shareUrl.value = "";
-    setStatus("Share URL could not be updated.", "error");
+    shareUrls = { share: "", svg: "" };
+    syncActiveLinkUi();
+    setStatus("Link could not be updated.", "error");
   });
 }
 
@@ -124,24 +142,33 @@ function removeLayer(layerId) {
 
 async function syncShareUrl(copyToClipboard = false) {
   const url = writeStateToUrl(state);
-  refs.shareUrl.value = url;
+  const svgUrl = buildStandaloneSvgUrl(state);
+  shareUrls = { share: url, svg: svgUrl };
+  syncActiveLinkUi();
   if (!copyToClipboard) {
-    setStatus("Share link ready.", "success");
+    setStatus("Link ready.", "success");
     return;
   }
+  const activeUrl = shareUrls[activeLinkMode];
   if (!navigator.clipboard?.writeText) {
-    setStatus("Share link generated. Copy it from the field.", "success");
+    setStatus("Link generated. Copy it from the field.", "success");
     return;
   }
   try {
-    await navigator.clipboard.writeText(url);
-    setStatus("Share link copied.", "success");
+    await navigator.clipboard.writeText(activeUrl);
+    setStatus("Link copied.", "success");
   } catch {
-    setStatus("Share link generated. Copy it from the field.", "success");
+    setStatus("Link generated. Copy it from the field.", "success");
   }
 }
 
 function bindEvents() {
+  refs.linkModeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      activeLinkMode = button.dataset.linkMode;
+      syncActiveLinkUi();
+    });
+  });
   refs.assetLibrary.addEventListener("click", (event) => {
     const button = event.target.closest("[data-add-layer]");
     if (!button) {
@@ -213,10 +240,10 @@ function bindEvents() {
   });
 
   refs.copyLink.addEventListener("click", () => {
-    refs.shareUrl.value = "Generating...";
+    refs.activeUrl.value = "Generating...";
     syncShareUrl(true).catch(() => {
-      refs.shareUrl.value = "";
-      setStatus("Share link could not be copied.", "error");
+      syncActiveLinkUi();
+      setStatus("Link could not be copied.", "error");
     });
   });
   refs.resetFlag.addEventListener("click", () => {

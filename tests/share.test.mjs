@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { decodeState, encodeState } from "../app/share.js";
+import { buildStandaloneSvgUrl, decodeState, encodeState } from "../app/share.js";
 
 function simplify(state) {
   return {
@@ -201,4 +201,21 @@ test("decodeState supports legacy base64url payloads", () => {
       }
     ]
   });
+});
+
+test("buildStandaloneSvgUrl points at the standalone svg route", () => {
+  const originalWindow = globalThis.window;
+  globalThis.window = { location: { href: "https://example.com/custom-flag-creator/" } };
+
+  try {
+    assert.equal(
+      buildStandaloneSvgUrl({
+        baseColor: "#ffffff",
+        layers: [{ id: "x", assetId: "center_star", color: "#c1121f" }]
+      }),
+      "https://example.com/custom-flag-creator/svg/#f=!0b4"
+    );
+  } finally {
+    globalThis.window = originalWindow;
+  }
 });

@@ -6,7 +6,6 @@
 }
 
 .panel-header,
-.topbar-actions,
 .base-controls,
 .base-color-control,
 .layer-toolbar,
@@ -23,7 +22,6 @@
 }
 
 .base-color-control,
-.share-field,
 .color-input {
   font-size: 0.87rem;
 }
@@ -35,13 +33,18 @@
 }
 
 .base-color-control,
-.share-field {
+.color-input {
   display: flex;
   gap: 6px;
   align-items: center;
 }
 
-.share-field span,
+.share-field {
+  display: grid;
+  gap: 4px;
+}
+
+.share-toolbar span,
 .base-color-control span {
   white-space: nowrap;
 }
@@ -61,13 +64,40 @@
 }
 
 .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 0 12px;
   color: var(--text);
   cursor: pointer;
+  text-decoration: none;
 }
 
 .button-primary {
   border-color: var(--accent);
+}
+
+.toggle-group {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.toggle-button {
+  height: 30px;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.toggle-button + .toggle-button {
+  border-left: 1px solid var(--line);
+}
+
+.toggle-button.is-selected {
+  background: var(--accent);
+  color: #ffffff;
 }
 
 .base-color-control input,
@@ -113,6 +143,10 @@
 
 .status-message[data-tone="error"] {
   color: #b00020;
+}
+
+.status-message:empty {
+  display: none;
 }
 
 .layer-list,
@@ -287,5 +321,14 @@
 
   .layer-settings {
     grid-template-columns: 1fr;
+  }
+
+  .topbar-buttons {
+    display: grid;
+  }
+
+  .share-toolbar {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

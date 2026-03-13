@@ -16,9 +16,12 @@
       <header class="topbar">
         <div class="title-block">
           <h1>Custom Flag Creator</h1>
-          <p class="topbar-note">
-            <code>full.svg</code> -> custom layers -> <code>frame.svg</code>
-          </p>
+          <div class="title-meta">
+            <p class="topbar-note">
+              <code>full.svg</code> -> custom layers -> <code>frame.svg</code>
+            </p>
+            <p id="status-message" class="status-message" aria-live="polite"></p>
+          </div>
         </div>
         <div class="topbar-actions">
           <div class="base-controls">
@@ -28,19 +31,41 @@
             </label>
             <div id="base-presets" class="color-presets" aria-label="Base color presets"></div>
           </div>
-          <label class="share-field" for="share-url">
-            <span>Share</span>
-            <input id="share-url" class="share-input" type="text" readonly />
-          </label>
-          <button id="copy-link" class="button button-primary" type="button">
-            Share
-          </button>
-          <button id="reset-flag" class="button" type="button">
-            Reset
-          </button>
+          <div class="share-stack">
+            <div class="share-toolbar">
+              <span>Link</span>
+              <div class="toggle-group" role="tablist" aria-label="Link type">
+                <button
+                  class="toggle-button is-selected"
+                  type="button"
+                  role="tab"
+                  aria-selected="true"
+                  data-link-mode="share"
+                >
+                  Share
+                </button>
+                <button
+                  class="toggle-button"
+                  type="button"
+                  role="tab"
+                  aria-selected="false"
+                  data-link-mode="svg"
+                >
+                  SVG
+                </button>
+              </div>
+            </div>
+            <input id="active-url" class="share-input" type="text" readonly aria-label="Active link" />
+          </div>
+          <div class="topbar-buttons">
+            <button id="copy-link" class="button button-primary" type="button">Copy</button>
+            <a id="open-link" class="button" href="./" target="_blank" rel="noopener noreferrer">Open</a>
+            <button id="reset-flag" class="button" type="button">
+              Reset
+            </button>
+          </div>
         </div>
       </header>
-      <p id="status-message" class="status-message" aria-live="polite"></p>
 
       <main class="workspace">
         <section class="panel preview-panel">
