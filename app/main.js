@@ -9,6 +9,7 @@ import { renderLayerThumbs } from "./layer-thumbs.js";
 import { createLinkControls } from "./link-controls.js";
 import { buildPreviewNodes } from "./preview.js";
 import { buildStandaloneSvgUrl, readStateFromUrl, writeStateToUrl } from "./share.js";
+import { downloadCurrentFlagSvg } from "./svg-download.js";
 import { renderAssetLibrary, renderBasePresets, renderLayers, syncLayerControls } from "./ui.js";
 
 const refs = {
@@ -18,6 +19,7 @@ const refs = {
   basePresets: document.querySelector("#base-presets"),
   copyLink: document.querySelector("#copy-link"),
   emptyLayers: document.querySelector("#empty-layers"),
+  exportSvg: document.querySelector("#export-svg"),
   flagPreview: document.querySelector("#flag-preview"),
   layersList: document.querySelector("#layers-list"),
   linkModeButtons: document.querySelectorAll("[data-link-mode]"),
@@ -229,6 +231,15 @@ function bindEvents() {
       linkControls.sync();
       setStatus("Link could not be copied.", "error");
     });
+  });
+  refs.exportSvg.addEventListener("click", () => {
+    downloadCurrentFlagSvg(state)
+      .then(() => {
+        setStatus("SVG downloaded.", "success");
+      })
+      .catch(() => {
+        setStatus("SVG could not be exported.", "error");
+      });
   });
   refs.resetFlag.addEventListener("click", () => {
     updateState(createDefaultState());
